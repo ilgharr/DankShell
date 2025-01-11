@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTTP Client</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #status {
+      margin-top: 20px;
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+<h1>Send HTTP Request</h1>
+<button id="sendRequest">Send Request to /auth</button>
+<p id="status"></p>
+
+<script>
+  // JavaScript to handle button click and send an HTTP request
+  document.getElementById('sendRequest').addEventListener('click', async () => {
+    const statusElement = document.getElementById('status');
+
+    try {
+      // Send a POST request to localhost:8080/auth
+      const response = await fetch('http://localhost:8080/auth', {
+        method: 'POST', // You can adjust this to GET or any appropriate method
+        headers: {
+          'Content-Type': 'application/json', // Example of content-type
+        },
+        body: JSON.stringify({ example: 'test' }) // Send some dummy data in body
+      });
+
+      // If the response status is OK
+      if (response.ok) {
+        statusElement.textContent = '200 OK';
+        statusElement.style.color = 'green';
+      } else {
+        statusElement.textContent = `Error: ${response.status} ${response.statusText}`;
+        statusElement.style.color = 'red';
+      }
+    } catch (error) {
+      // Display any errors (e.g., network failures)
+      statusElement.textContent = `Error: ${error.message}`;
+      statusElement.style.color = 'red';
+    }
+  });
+</script>
+</body>
+</html>
