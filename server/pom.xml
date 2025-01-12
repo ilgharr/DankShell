@@ -7,6 +7,12 @@
   <packaging>jar</packaging>
   <name>server</name>
   <url>http://maven.apache.org</url>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.1.4</version>
+    <relativePath/>
+  </parent>
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -14,7 +20,16 @@
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-devtools</artifactId>
+      <version>3.1.4</version>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
   </dependencies>
+
   <build>
     <plugins>
       <plugin>
@@ -27,4 +42,5 @@
       </plugin>
     </plugins>
   </build>
+
 </project>
