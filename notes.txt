@@ -1,0 +1,37 @@
+Security measures that will be implemented
+
+HTTPS
+Verify Referer or Origin header
+Restrict CORS policy
+Rate limiting
+server-generated request identifier
+AWS Cognito authentication
+
+
+
+### **Header Parameters**:
+1. **`kid`**: Key ID used to identify the public key for signature verification.
+2. **`alg`**: Algorithm used to sign the token (e.g., `RS256`).
+
+### **Payload Parameters**:
+#### **Standard Claims**:
+1. **`sub`**: Unique user ID in Cognito (`dc2dd5c8-8081-7054-447b-7dff1cfdcff7`).
+2. **`iss`**: Issuer of the token (your Cognito user pool URL).
+3. **`aud`**: The intended audience (your app's client ID).
+4. **`iat`**: Time when the token was issued (`1737144869`).
+5. **`exp`**: Time when the token expires (`1737145169`).
+
+#### **AWS Cognito-Specific Claims**:
+1. **`at_hash`**: Hash of the access token (for security).
+2. **`cognito:username`**: Cognito-specific unique username for the user.
+3. **`event_id`**: Unique ID for the authentication event.
+4. **`token_use`**: Indicates token purpose (`id` means this is an ID token).
+5. **`email_verified`**: True if the user's email is verified.
+6. **`auth_time`**: Time the user authenticated (`1737144869`).
+7. **`email`**: User's email address (`ilgharrahno115@gmail.com`).
+8. **`jti`**: Unique ID for this token (prevents reuse).
+9. **`origin_jti`**: ID of the original token (useful for tracing).
+
+### **Purpose**:
+- **Standard Claims** validate the token (expiry, issuer, intended recipient).
+- **Cognito-Specific Claims** provide user details (email, username, whether their email is verified).
