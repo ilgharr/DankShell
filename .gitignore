@@ -1,4 +1,5 @@
 src/main/java/org/ilghar/Secrets.java
+frontend/node_modules
 
 target/
 !.mvn/wrapper/maven-wrapper.jar
