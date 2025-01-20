@@ -35,3 +35,12 @@ AWS Cognito authentication
 ### **Purpose**:
 - **Standard Claims** validate the token (expiry, issuer, intended recipient).
 - **Cognito-Specific Claims** provide user details (email, username, whether their email is verified).
+
+
+Checking AWS Cognito token validity
+ 1. **Signature**: Ensure the signature is valid using the correct public key (found via `kid`) to confirm the token wasn't tampered with and was issued by AWS Cognito.
+ 2. **Issuer (`iss`)**: Verify the token came from your Cognito User Pool.
+ 3. **Audience (`aud`)**: Confirm the token is meant for your application (matches your Client ID).
+ 4. **Token Use (`token_use`)**: Check the token's purpose (`id` or `access`).
+ 5. **Expiration (`exp`)**: Ensure the token hasn’t expired.
+ 6. **Issued At (`iat`)**: Confirm the token was issued at a reasonable time.
