@@ -6,19 +6,23 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class Main {
+public class Main implements CommandLineRunner{
 
-    // Inject the Memcached component
-//    @Autowired
-//    private Memcached memcached;
+    @Autowired
+    public Memcached memcached;
 
     public static void main(String[] args) {
         SpringApplication.run(Main.class, args);
     }
 
-    // Logic will execute after application startup
-//    @Override
-//    public void run(String... args) throws Exception {
-//        memcached.memcachedConnect();
-//    }
+    @Override
+    public void run(String... args) throws Exception {
+        try {
+            memcached.memcachedConnect();
+        } catch (Exception e) {
+            System.err.println("Error connecting to Memcached: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
 }

@@ -5,9 +5,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 public class ReactController {
-
-    @GetMapping(value={"/", "/home"})
-    public String serveReactApp() {
-        return "index.html";
-    }
+//
+//    @GetMapping(value={"/", "/home"})
+//    public String serveReactApp() {
+//        return "index.html";
+//    }
 }

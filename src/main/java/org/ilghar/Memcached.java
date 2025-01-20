@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.net.InetSocketAddress;
 
-@Component // This makes the class a Spring-managed bean
+@Component
 public class Memcached {
 
     @Value("${memcached.host}")

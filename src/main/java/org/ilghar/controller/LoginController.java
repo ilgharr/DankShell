@@ -7,6 +7,7 @@ import java.net.URI;
 import java.util.Base64;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -18,9 +19,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import org.ilghar.Memcached;
 
 @RestController
 public class LoginController {
+
+    @Autowired
+    private Memcached memcached;
+
+    @GetMapping("/")
+    public String landingPage() {
+        return "Landing page!"; // Redirects to home page
+    }
 
     @GetMapping("/login")
     public ResponseEntity<Void> login() throws IOException {
@@ -37,30 +47,57 @@ public class LoginController {
     }
 
     @GetMapping("/callback")
-    public ResponseEntity<Void> callback(@RequestParam(name = "code", required = false) String code,
+    public ResponseEntity<String> callback(@RequestParam(name = "code", required = false) String code,
                                          @RequestParam(name = "error", required = false) String error) {
         if (code == null) {
-            // If the 'code' is missing, it's a bad request
             return ResponseEntity.badRequest().build();
         }
 
         if (error != null) {
-            // Handle OAuth2 errors (optional - return an error page or status)
             return ResponseEntity.badRequest().build();
         }
 
-        // Exchange authorization code for tokens
         String tokenResponse = exchangeCodeForTokens(code);
         if (tokenResponse == null) {
-            // If token exchange fails, return an internal server error
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
         decodeTokenWithJsonPayload(tokenResponse);
 
-        // On successful exchange, redirect the user to /home
-        HttpHeaders headers = new HttpHeaders();
-        return new ResponseEntity<>(headers, HttpStatus.FOUND); // HTTP 302 Found
+
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.setLocation(URI.create("/home"));
+//        return new ResponseEntity<>(headers, HttpStatus.FOUND); // HTTP 302 Found
+
+        return ResponseEntity.ok("Login successful!");
+    }
+
+    public static void decodeTokenWithJsonPayload(String json) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, String> tokenMap = objectMapper.readValue(json, Map.class);
+            String token = tokenMap.get("id_token");
+
+            if (token == null || token.isEmpty()) {
+                System.err.println("Missing or empty id_token in the JSON payload.");
+                return;
+            }
+
+            String[] parts = token.split("\\.");
+            if (parts.length != 3) {
+                System.err.println("Invalid JWT format! Ensure only the JWT is passed.");
+                return;
+            }
+
+            String header = new String(Base64.getUrlDecoder().decode(parts[0]));
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+
+            System.out.println("Decoded JWT Header: " + header);
+            System.out.println("Decoded JWT Payload: " + payload);
+
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+        }
     }
 
     private String exchangeCodeForTokens(String code) {
@@ -79,43 +116,10 @@ public class LoginController {
             ResponseEntity<String> response = restTemplate.postForEntity(
                     Secrets.TOKEN_ENDPOINT, new HttpEntity<>(requestBody, headers), String.class);
 
-            return response.getBody(); // Return the full token response (likely a JSON string)
+            return response.getBody();
         } catch (Exception e) {
             System.err.println("Error while exchanging code for tokens: " + e.getMessage());
             return null;
-        }
-    }
-
-    public static void decodeTokenWithJsonPayload(String json) {
-        try {
-            // Step 1: Parse the JSON to extract the token (id_token or access_token)
-            ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, String> tokenMap = objectMapper.readValue(json, Map.class); // Parse JSON as a Map
-            String token = tokenMap.get("id_token"); // Extract `id_token` key (use `access_token` if needed)
-
-            if (token == null || token.isEmpty()) {
-                System.err.println("Missing or empty id_token in the JSON payload.");
-                return;
-            }
-
-            // Step 2: Split the JWT into its three parts: header, payload, signature
-            String[] parts = token.split("\\.");
-            if (parts.length != 3) {
-                System.err.println("Invalid JWT format! Ensure only the JWT is passed.");
-                return;
-            }
-
-            // Step 3: Decode Header and Payload parts from Base64URL
-            String header = new String(Base64.getUrlDecoder().decode(parts[0]));
-            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
-
-            // Step 4: Print the decoded parts
-            System.out.println("Decoded JWT Header: " + header);
-            System.out.println("Decoded JWT Payload: " + payload);
-
-        } catch (Exception e) {
-            // Handle JSON parsing or decoding errors gracefully
-            System.err.println("Error: " + e.getMessage());
         }
     }
 
@@ -130,17 +134,13 @@ public class LoginController {
 
         System.out.println("Logging out from Cognito with URL: " + cognitoLogoutUrl);
 
-        // Set the redirection headers
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(URI.create(cognitoLogoutUrl)); // Use setLocation for readability
-
-        // Return 302 (Found) redirect
         return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
     }
 
     @GetMapping("/logout-success")
     public String logoutSuccess() {
-        return "redirect:/"; // Redirects to home page
+        return "Logout successful!";
     }
 }
-
