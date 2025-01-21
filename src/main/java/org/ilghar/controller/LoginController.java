@@ -1,35 +1,24 @@
 package org.ilghar.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.*;
+
+import com.nimbusds.jose.crypto.RSASSAVerifier;
+import com.nimbusds.jose.jwk.*;
+import com.nimbusds.jwt.*;
+
+import org.ilghar.Memcached;
 import org.ilghar.Secrets;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
+import org.springframework.util.*;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestTemplate;
-
-import com.nimbusds.jose.JWSObject;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.proc.JWSKeySelector;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
-
-import org.ilghar.Memcached;
+import java.util.Date;
 
 @RestController
 public class LoginController {
@@ -73,13 +62,18 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
-//        decodeTokenWithJsonPayload(tokenResponse);
-        System.out.println("Token response: " + validateToken(tokenResponse));
+        boolean isValid = validateToken(tokenResponse);
+        if (!isValid) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+        }
+
         return ResponseEntity.ok("Login successful!");
     }
 
     private String exchangeCodeForTokens(String code) {
         RestTemplate restTemplate = new RestTemplate();
+
+        // Request body for token exchange
         MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
         requestBody.add("grant_type", "authorization_code");
         requestBody.add("client_id", Secrets.CLIENT_ID);
@@ -87,114 +81,78 @@ public class LoginController {
         requestBody.add("redirect_uri", Secrets.REDIRECT_URI);
         requestBody.add("code", code);
 
+        // Headers
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/x-www-form-urlencoded");
 
         try {
+            // Call the token endpoint
             ResponseEntity<String> response = restTemplate.postForEntity(
                     Secrets.TOKEN_ENDPOINT, new HttpEntity<>(requestBody, headers), String.class);
 
-            return response.getBody();
+            // Check if the response is successful
+            if (response.getStatusCode().is2xxSuccessful()) {
+                // Parse the response body using Jackson ObjectMapper
+                ObjectMapper objectMapper = new ObjectMapper();
+                JsonNode responseBody = objectMapper.readTree(response.getBody());
+
+                // Check and extract the `id_token`
+                if (responseBody.has("id_token")) {
+                    return responseBody.get("id_token").asText();
+                } else {
+                    System.err.println("`id_token` not found in the token response.");
+                }
+            } else {
+                System.err.println("Token exchange failed with status: " + response.getStatusCode());
+            }
         } catch (Exception e) {
             System.err.println("Error while exchanging code for tokens: " + e.getMessage());
-            return null;
         }
+
+        return null;
     }
 
-    private boolean validateToken(String token) {
+    private boolean validateToken(String idToken) {
         try {
-            // 1. Decode the token
-            SignedJWT signedJWT = SignedJWT.parse(token);
+            // Parse the token
+            SignedJWT signedJWT = SignedJWT.parse(idToken);
 
-            // 2. Extract the `kid` from the header
-            String kid = signedJWT.getHeader().getKeyID();
+            // Get Cognito's JSON Web Key Set (JWKS)
+            JWKSet jwkSet = JWKSet.load(new URL(Secrets.JWKS_URL));
+            JWK jwk = jwkSet.getKeyByKeyId(signedJWT.getHeader().getKeyID());
 
-            // 3. Fetch the JWKS from AWS Cognito
-            // Replace this URL with your Cognito User Pool's JWKS endpoint
-            String jwksUrl = "https://cognito-idp.ca-central-1.amazonaws.com/ca-central-1_GLNVaRj0r/.well-known/jwks.json";
-            JWKSet jwks = JWKSet.load(new URL(jwksUrl));
-
-            // 4. Find the matching public key using the `kid`
-            JWK jwk = jwks.getKeyByKeyId(kid);
             if (jwk == null || !(jwk instanceof RSAKey)) {
-                System.out.println("Public key not found or invalid key type");
+                System.err.println("Invalid JWK or unsupported key type.");
                 return false;
             }
 
             RSAKey rsaKey = (RSAKey) jwk;
 
-            // 5. Verify the token signature
-            if (!signedJWT.verify(new com.nimbusds.jose.crypto.RSASSAVerifier(rsaKey))) {
-                System.out.println("Invalid JWT signature!");
+            // Verify the token's signature
+            RSASSAVerifier verifier = new RSASSAVerifier(rsaKey);
+            if (!signedJWT.verify(verifier)) {
+                System.err.println("Token signature verification failed.");
                 return false;
             }
 
-            // 6. Validate claims
-            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-
-            // Validate issuer (`iss`)
-            String expectedIssuer = "https://cognito-idp.ca-central-1.amazonaws.com/ca-central-1_GLNVaRj0r";
-            if (!expectedIssuer.equals(claims.getIssuer())) {
-                System.out.println("Issuer does not match!");
+            // Validate claims (e.g., expiration, audience, etc.)
+            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+            if (claimsSet.getExpirationTime().before(new Date())) {
+                System.err.println("Token is expired.");
                 return false;
             }
 
-            // Validate audience (`aud`)
-            String expectedAudience = "4lnf97fd4bs0emr40mfbriso4c";
-            List<String> audiences = claims.getAudience();
-            if (!audiences.contains(expectedAudience)) {
-                System.out.println("Audience does not match!");
+            if (!claimsSet.getAudience().contains(Secrets.CLIENT_ID)) {
+                System.err.println("Invalid audience.");
                 return false;
             }
 
-            // Check if the token is expired (`exp`)
-            if (claims.getExpirationTime() == null || claims.getExpirationTime().before(new java.util.Date())) {
-                System.out.println("Token has expired!");
-                return false;
-            }
-
-            // Optional: Check email is verified (`email_verified`)
-            if (!claims.getBooleanClaim("email_verified")) {
-                System.out.println("Email is not verified!");
-                return false;
-            }
-
-            // All checks passed
-            return true;
-
+            return true; // Token is valid
         } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("JWT validation failed: " + e.getMessage());
-            return false;
+            System.err.println("Error while validating token: " + e.getMessage());
         }
-    }
 
-    public static void decodeTokenWithJsonPayload(String json) {
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, String> tokenMap = objectMapper.readValue(json, Map.class);
-            String token = tokenMap.get("id_token");
-
-            if (token == null || token.isEmpty()) {
-                System.err.println("Missing or empty id_token in the JSON payload.");
-                return;
-            }
-
-            String[] parts = token.split("\\.");
-            if (parts.length != 3) {
-                System.err.println("Invalid JWT format! Ensure only the JWT is passed.");
-                return;
-            }
-
-            String header = new String(Base64.getUrlDecoder().decode(parts[0]));
-            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
-
-            System.out.println("Decoded JWT Header: " + header);
-            System.out.println("Decoded JWT Payload: " + payload);
-
-        } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
-        }
+        return false; // Token validation failed
     }
 
     @GetMapping("/logout")
