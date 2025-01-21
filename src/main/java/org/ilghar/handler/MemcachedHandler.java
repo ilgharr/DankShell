@@ -1,4 +1,4 @@
-package org.ilghar;
+package org.ilghar.handler;
 
 import net.spy.memcached.MemcachedClient;
 import org.springframework.beans.factory.annotation.Value;
@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import java.net.InetSocketAddress;
 
 @Component
-public class Memcached {
+public class MemcachedHandler {
 
     @Value("${memcached.host}")
     private String memcachedHost;

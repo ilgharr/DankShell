@@ -6,7 +6,7 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jwt.*;
 
-import org.ilghar.Memcached;
+import org.ilghar.handler.MemcachedHandler;
 import org.ilghar.Secrets;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,15 +20,17 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Date;
 
+import static org.ilghar.handler.JWTHandler.validateToken;
+
 @RestController
 public class LoginController {
 
     @Autowired
-    private Memcached memcached;
+    private MemcachedHandler memcachedHandler;
 
     @GetMapping("/")
     public String landingPage() {
-        return "Landing page!"; // Redirects to home page
+        return "Landing page!";
     }
 
     @GetMapping("/login")
@@ -48,11 +50,7 @@ public class LoginController {
     @GetMapping("/callback")
     public ResponseEntity<String> callback(@RequestParam(name = "code", required = false) String code,
                                          @RequestParam(name = "error", required = false) String error) {
-        if (code == null) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        if (error != null) {
+        if (code == null || error != null) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -62,9 +60,11 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
-        boolean isValid = validateToken(tokenResponse);
+        boolean isValid = validateToken(tokenResponse, Secrets.JWKS_URL, Secrets.CLIENT_ID);
         if (!isValid) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
+        }else {
+            System.out.println("AWS Cognito Token is valid");
         }
 
         return ResponseEntity.ok("Login successful!");
@@ -112,49 +112,6 @@ public class LoginController {
         return null;
     }
 
-    private boolean validateToken(String idToken) {
-        try {
-            // Parse the token
-            SignedJWT signedJWT = SignedJWT.parse(idToken);
-
-            // Get Cognito's JSON Web Key Set (JWKS)
-            JWKSet jwkSet = JWKSet.load(new URL(Secrets.JWKS_URL));
-            JWK jwk = jwkSet.getKeyByKeyId(signedJWT.getHeader().getKeyID());
-
-            if (jwk == null || !(jwk instanceof RSAKey)) {
-                System.err.println("Invalid JWK or unsupported key type.");
-                return false;
-            }
-
-            RSAKey rsaKey = (RSAKey) jwk;
-
-            // Verify the token's signature
-            RSASSAVerifier verifier = new RSASSAVerifier(rsaKey);
-            if (!signedJWT.verify(verifier)) {
-                System.err.println("Token signature verification failed.");
-                return false;
-            }
-
-            // Validate claims (e.g., expiration, audience, etc.)
-            JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-            if (claimsSet.getExpirationTime().before(new Date())) {
-                System.err.println("Token is expired.");
-                return false;
-            }
-
-            if (!claimsSet.getAudience().contains(Secrets.CLIENT_ID)) {
-                System.err.println("Invalid audience.");
-                return false;
-            }
-
-            return true; // Token is valid
-        } catch (Exception e) {
-            System.err.println("Error while validating token: " + e.getMessage());
-        }
-
-        return false; // Token validation failed
-    }
-
     @GetMapping("/logout")
     public ResponseEntity<Void> logout() {
         String cognitoLogoutUrl = String.format(
@@ -167,7 +124,7 @@ public class LoginController {
         System.out.println("Logging out from Cognito with URL: " + cognitoLogoutUrl);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(URI.create(cognitoLogoutUrl)); // Use setLocation for readability
+        headers.setLocation(URI.create(cognitoLogoutUrl));
         return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
     }
 
