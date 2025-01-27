@@ -6,7 +6,6 @@ import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jwt.*;
 
-import org.ilghar.handler.MemcachedHandler;
 import org.ilghar.Secrets;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,26 +15,21 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.URL;
-import java.util.Base64;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.net.*;
+import java.util.*;
 
-import static org.ilghar.handler.JWTHandler.validateToken;
 
 @RestController
 public class LoginController {
 
-    @Autowired
-    private MemcachedHandler memcachedHandler;
-
+    // this is the landing page
     @GetMapping("/")
     public String landingPage() {
         return "Landing page!";
     }
 
+    // user is redirected to AWS Cognito Login/Signup page
+    // responds with AWS login endpoint, client id, redirect uri and scope
     @GetMapping("/login")
     public ResponseEntity<Void> login() throws IOException {
         String cognitoUrl = Secrets.AUTHORIZATION_ENDPOINT + "?" +
@@ -50,6 +44,10 @@ public class LoginController {
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
+    // AWS Cognito communicates with this endpoint
+    // Code is received after successful login
+    // code and secrets are exchanged for user token
+    // responds frontend with the token
     @GetMapping("/callback")
     public ResponseEntity<String> callback(@RequestParam(name = "code", required = false) String code,
                                          @RequestParam(name = "error", required = false) String error) {
@@ -62,23 +60,29 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
-        Map<String, String> parsedToken = parseToken(tokenResponse);
-        memcachedHandler.memcachedAddData("sub", parsedToken.get("sub"), getTTL(parsedToken.get("exp")));
-
         return ResponseEntity.ok(tokenResponse);
     }
 
-//    @PostMapping("/send-token")
-//    public void sendToken(@RequestBody String token) throws Exception {
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.set("Content-Type", "text/plain");
-//
-//        HttpEntity<String> request = new HttpEntity<>(token, headers);
-//        RestTemplate restTemplate = new RestTemplate();
-//        restTemplate.postForLocation("http://localhost:8443/recieve-user-token", request);
-//    }
+    // logs user out
+    // responds with AWS Cognito logout endpoint, client id and redirect uri
+    @GetMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        String cognitoLogoutUrl = String.format(
+                "%s?client_id=%s&logout_uri=%s",
+                Secrets.LOGOUT_ENDPOINT,
+                Secrets.CLIENT_ID,
+                Secrets.LOGOUT_URI
+        );
 
+        System.out.println("Logging out from Cognito with URL: " + cognitoLogoutUrl);
 
+        HttpHeaders headers = new HttpHeaders();
+        headers.setLocation(URI.create(cognitoLogoutUrl));
+        return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
+    }
+
+    // handles code exchange for tokens
+    // used inside /callback
     private String exchangeCodeForTokens(String code) {
         RestTemplate restTemplate = new RestTemplate();
 
@@ -173,24 +177,5 @@ public class LoginController {
         return Integer.parseInt(exp) - (int)(System.currentTimeMillis()/1000);
     }
 
-    @GetMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        String cognitoLogoutUrl = String.format(
-                "%s?client_id=%s&logout_uri=%s",
-                Secrets.LOGOUT_ENDPOINT,
-                Secrets.CLIENT_ID,
-                Secrets.LOGOUT_URI
-        );
 
-        System.out.println("Logging out from Cognito with URL: " + cognitoLogoutUrl);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setLocation(URI.create(cognitoLogoutUrl));
-        return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
-    }
-
-    @GetMapping("/logout-success")
-    public String logoutSuccess() {
-        return "Logout successful!";
-    }
 }

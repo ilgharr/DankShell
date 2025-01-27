@@ -43,32 +43,32 @@ public class JWTHandler {
         System.out.println("Public Key: " + publicKey);
     }
 
-    public static String generateToken() throws Exception {
-        byte[] privateKeyBytes = Base64.getDecoder().decode(Secrets.MOCK_PRIVATE_KEY);
-        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PrivateKey privateKey = keyFactory.generatePrivate(spec);
-
-        JWTClaimsSet claimSet = new JWTClaimsSet.Builder()
-                .issuer("http://localhost:8443")
-                .subject("test-user")
-                .audience("test-audience")
-                .expirationTime(new Date(System.currentTimeMillis() + 60000))
-                .notBeforeTime(new Date())
-                .issueTime(new Date())
-                .claim("role", "admin")
-                .build();
-
-        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
-                .keyID("test-key-id-1")
-                .type(JOSEObjectType.JWT)
-                .build();
-
-        SignedJWT signedJWT = new SignedJWT(header, claimSet);
-        JWSSigner signer = new RSASSASigner(privateKey);
-        signedJWT.sign(signer);
-        return signedJWT.serialize();
-    }
+//    public static String generateToken() throws Exception {
+//        byte[] privateKeyBytes = Base64.getDecoder().decode(Secrets.MOCK_PRIVATE_KEY);
+//        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
+//        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+//        PrivateKey privateKey = keyFactory.generatePrivate(spec);
+//
+//        JWTClaimsSet claimSet = new JWTClaimsSet.Builder()
+//                .issuer("http://localhost:8443")
+//                .subject("test-user")
+//                .audience("test-audience")
+//                .expirationTime(new Date(System.currentTimeMillis() + 60000))
+//                .notBeforeTime(new Date())
+//                .issueTime(new Date())
+//                .claim("role", "admin")
+//                .build();
+//
+//        JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
+//                .keyID("test-key-id-1")
+//                .type(JOSEObjectType.JWT)
+//                .build();
+//
+//        SignedJWT signedJWT = new SignedJWT(header, claimSet);
+//        JWSSigner signer = new RSASSASigner(privateKey);
+//        signedJWT.sign(signer);
+//        return signedJWT.serialize();
+//    }
 
     public static boolean validateToken(String idToken, String jwks_url, String client_id) {
         try {
@@ -118,14 +118,6 @@ public class JWTHandler {
         return false;
     }
 
-//    @GetMapping("/send-token")
-//    public void sendToken() throws Exception {
-//        String token = generateToken(); // Generate the token
-//        String targetUrl = "http://localhost:8080/token-testing"; // Target URL to send the token
-//        sendTokenToUrl(token, targetUrl); // Send the token (ignore the response)
-//    }
-
-    // Function to perform an HTTP POST request to send the token
     public void sendTokenToUrl(String token, String url) {
         try {
             HttpHeaders headers = new HttpHeaders();

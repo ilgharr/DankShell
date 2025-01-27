@@ -1,28 +1,30 @@
 package org.ilghar;
 
-import org.ilghar.handler.MemcachedHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
-public class Main implements CommandLineRunner {
+// implements CommandLineRunner
+//import org.ilghar.handler.MemcachedHandler;
 
-    @Autowired
-    public MemcachedHandler memcached;
+@SpringBootApplication
+public class Main {
+
+//    @Autowired
+//    public MemcachedHandler memcached;
 
     public static void main(String[] args) throws Exception {
         SpringApplication.run(Main.class, args);
     }
 
-    @Override
-    public void run(String... args) throws Exception {
-        try {
-            memcached.memcachedConnect();
-        } catch (Exception e) {
-            System.err.println("Error connecting to Memcached: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
+//    @Override
+//    public void run(String... args) throws Exception {
+//        try {
+//            memcached.memcachedConnect();
+//        } catch (Exception e) {
+//            System.err.println("Error connecting to Memcached: " + e.getMessage());
+//            e.printStackTrace();
+//        }
+//    }
 }
