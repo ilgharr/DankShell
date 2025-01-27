@@ -44,3 +44,19 @@ Checking AWS Cognito token validity
  4. **Token Use (`token_use`)**: Check the token's purpose (`id` or `access`).
  5. **Expiration (`exp`)**: Ensure the token hasn’t expired.
  6. **Issued At (`iat`)**: Confirm the token was issued at a reasonable time.
+
+| **Field**             | **Description**                               | **Type**       | **Details**                                        |
+|-----------------------|-----------------------------------------------|----------------|----------------------------------------------------|
+| **`at_hash`**         | Hash for validating the access token          | **Dynamic**    | Changes with each access token issued.             |
+| **`sub`**             | Unique user ID (subject)                      | **Permanent**  | Fixed identifier for the user across sessions.     | <--
+| **`email_verified`**  | Whether the email is verified                 | **Permanent**  | Remains constant unless verification changes.      |
+| **`iss`**             | Token issuer (Cognito Identity Pool)          | **Permanent**  | Fixed to the Cognito instance.                     |
+| **`cognito:username`**| Cognito username                              | **Permanent**  | Fixed identifier for the user within Cognito.      |
+| **`origin_jti`**      | Initial token’s unique identifier             | **Dynamic**    | Changes with each session or token issued.         |
+| **`aud`**             | Client/application ID                         | **Permanent**  | Fixed for the application linked to Cognito.       |
+| **`token_use`**       | Token's purpose (e.g., `id`, or `access`)     | **Dynamic**    | May vary, especially between ID and Access Tokens. |
+| **`auth_time`**       | Authentication timestamp                      | **Dynamic**    | Changes with each token, as it reflects login time.|
+| **`exp`**             | Token expiration timestamp                    | **Dynamic**    | Based on token lifetime, changes for every token.  | <--
+| **`iat`**             | Token issuance timestamp                      | **Dynamic**    | Shows creation time and changes with each token.   |
+| **`jti`**             | Unique token identifier                       | **Dynamic**    | Changes with every token issued.                   | <--
+| **`email`**           | User’s email address                          | **Permanent**  | Persists unless the user updates their email.      |

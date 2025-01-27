@@ -49,6 +49,8 @@ public class MemcachedHandler {
         return "Key = " + key + " added to cache with value = " + value;
     }
 
+//    public boolean checkValueExists
+
     // Get data from Memcached
     public String memcachedGetData(String key) {
         if (this.memcachedClient == null) {

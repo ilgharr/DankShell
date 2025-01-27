@@ -18,7 +18,10 @@ import org.springframework.web.client.RestTemplate;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URL;
+import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.ilghar.handler.JWTHandler.validateToken;
 
@@ -55,20 +58,26 @@ public class LoginController {
         }
 
         String tokenResponse = exchangeCodeForTokens(code);
-
         if (tokenResponse == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
-        boolean isValid = validateToken(tokenResponse, Secrets.JWKS_URL, Secrets.CLIENT_ID);
-        if (!isValid) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid token");
-        }else {
-            System.out.println("AWS Cognito Token is valid");
-        }
+        Map<String, String> parsedToken = parseToken(tokenResponse);
+        memcachedHandler.memcachedAddData("sub", parsedToken.get("sub"), getTTL(parsedToken.get("exp")));
 
-        return ResponseEntity.ok("Login successful!");
+        return ResponseEntity.ok(tokenResponse);
     }
+
+//    @PostMapping("/send-token")
+//    public void sendToken(@RequestBody String token) throws Exception {
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.set("Content-Type", "text/plain");
+//
+//        HttpEntity<String> request = new HttpEntity<>(token, headers);
+//        RestTemplate restTemplate = new RestTemplate();
+//        restTemplate.postForLocation("http://localhost:8443/recieve-user-token", request);
+//    }
+
 
     private String exchangeCodeForTokens(String code) {
         RestTemplate restTemplate = new RestTemplate();
@@ -110,6 +119,58 @@ public class LoginController {
         }
 
         return null;
+    }
+
+    public Map<String, String> parseToken(String tokenResponse) {
+        try {
+            String[] tokenParts = tokenResponse.split("\\.");
+            if (tokenParts.length != 3) {
+                throw new IllegalArgumentException("Invalid token format. Token must have 3 parts.");
+            }
+
+            String payload = new String(Base64.getUrlDecoder().decode(tokenParts[1]));
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode payloadNode = objectMapper.readTree(payload);
+
+            Map<String, String> payloadMap = new HashMap<>();
+            payloadNode.fields().forEachRemaining(field -> {
+                payloadMap.put(field.getKey(), field.getValue().asText());
+            });
+
+            return payloadMap;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to decode or parse the token payload", e);
+        }
+    }
+
+    public void parseAndPrintTokens(String tokenResponse) {
+        try {
+            String[] tokenParts = tokenResponse.split("\\.");
+            if (tokenParts.length != 3) {
+                throw new IllegalArgumentException("Invalid token format. Token must have 3 parts.");
+            }
+
+            String payload = new String(Base64.getUrlDecoder().decode(tokenParts[1]));
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            var payloadMap = objectMapper.readTree(payload);
+
+            System.out.println("Decoded Token Payload:");
+            payloadMap.fields().forEachRemaining(field -> {
+                System.out.println(field.getKey() + ": " + field.getValue());
+            });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to decode or parse the token payload", e);
+        }
+    }
+
+    public static int getTTL(String exp){
+        return Integer.parseInt(exp) - (int)(System.currentTimeMillis()/1000);
     }
 
     @GetMapping("/logout")

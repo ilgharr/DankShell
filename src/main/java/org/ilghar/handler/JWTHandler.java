@@ -12,6 +12,14 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import org.ilghar.Secrets;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import java.net.URL;
 import java.security.*;
@@ -19,6 +27,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
 
+@RestController
 public class JWTHandler {
 
     // Generate RSA keys, will print the key onto screen!
@@ -41,7 +50,7 @@ public class JWTHandler {
         PrivateKey privateKey = keyFactory.generatePrivate(spec);
 
         JWTClaimsSet claimSet = new JWTClaimsSet.Builder()
-                .issuer("https://mock-issuer.com")
+                .issuer("http://localhost:8443")
                 .subject("test-user")
                 .audience("test-audience")
                 .expirationTime(new Date(System.currentTimeMillis() + 60000))
@@ -109,8 +118,27 @@ public class JWTHandler {
         return false;
     }
 
-//    public static void testToken() throws Exception {
-//        String token = generateToken();
-//        System.out.println("Mock token results: " + LoginController.validateToken(token, "https://mock-issuer.com/.well-known/jwks.json", "test-audience"));
+//    @GetMapping("/send-token")
+//    public void sendToken() throws Exception {
+//        String token = generateToken(); // Generate the token
+//        String targetUrl = "http://localhost:8080/token-testing"; // Target URL to send the token
+//        sendTokenToUrl(token, targetUrl); // Send the token (ignore the response)
 //    }
+
+    // Function to perform an HTTP POST request to send the token
+    public void sendTokenToUrl(String token, String url) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Content-Type", "text/plain"); // Token is sent as plain text
+
+            HttpEntity<String> request = new HttpEntity<>(token, headers);
+            RestTemplate restTemplate = new RestTemplate();
+
+            // Send the POST request but *do not handle the response*
+            restTemplate.postForLocation(url, request);
+        } catch (Exception e) {
+            // Log any errors
+            e.printStackTrace();
+        }
+    }
 }
