@@ -23,10 +23,10 @@ import java.util.*;
 public class LoginController {
 
     // this is the landing page
-    @GetMapping("/")
-    public String landingPage() {
-        return "Landing page!";
-    }
+//    @GetMapping("/")
+//    public String landingPage() {
+//        return "Landing page!";
+//    }
 
     // user is redirected to AWS Cognito Login/Signup page
     // responds with AWS login endpoint, client id, redirect uri and scope
@@ -48,9 +48,11 @@ public class LoginController {
     // Code is received after successful login
     // code and secrets are exchanged for user token
     // responds frontend with the token
-    @GetMapping("/callback")
-    public ResponseEntity<String> callback(@RequestParam(name = "code", required = false) String code,
+    @GetMapping("/api/callback")
+    public ResponseEntity<Map<String, String>> callback(@RequestParam(name = "code", required = false) String code,
                                          @RequestParam(name = "error", required = false) String error) {
+        System.out.println("/callback executed");
+
         if (code == null || error != null) {
             return ResponseEntity.badRequest().build();
         }
@@ -60,8 +62,15 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
-        return ResponseEntity.ok(tokenResponse);
+        return ResponseEntity.ok(Map.of("authToken",tokenResponse));
     }
+    // /callback is supposed to do many things
+    // caching
+    // user session
+    // database creation on sign up
+    // fetch user data from database
+    // create and send cookies.
+    // finally will redirect to /home with the data to be rendered
 
     // logs user out
     // responds with AWS Cognito logout endpoint, client id and redirect uri
@@ -81,40 +90,33 @@ public class LoginController {
         return ResponseEntity.status(HttpStatus.FOUND).headers(headers).build();
     }
 
-    // handles code exchange for tokens
-    // used inside /callback
     private String exchangeCodeForTokens(String code) {
+
+        // creates an object to perform HTTP request
         RestTemplate restTemplate = new RestTemplate();
 
-        // Request body for token exchange
+        // creates a "map" to hold the form data for the HTTP request
         MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+
+        // add keys and values inside the form
         requestBody.add("grant_type", "authorization_code");
         requestBody.add("client_id", Secrets.CLIENT_ID);
         requestBody.add("client_secret", Secrets.CLIENT_SECRET);
         requestBody.add("redirect_uri", Secrets.REDIRECT_URI);
         requestBody.add("code", code);
 
-        // Headers
+        // create HTTP headers for the request
         HttpHeaders headers = new HttpHeaders();
+
+        // sets the content type of the headers
         headers.set("Content-Type", "application/x-www-form-urlencoded");
 
         try {
-            // Call the token endpoint
+            // sends the POST request to the given endpoint
             ResponseEntity<String> response = restTemplate.postForEntity(
                     Secrets.TOKEN_ENDPOINT, new HttpEntity<>(requestBody, headers), String.class);
-
-            // Check if the response is successful
             if (response.getStatusCode().is2xxSuccessful()) {
-                // Parse the response body using Jackson ObjectMapper
-                ObjectMapper objectMapper = new ObjectMapper();
-                JsonNode responseBody = objectMapper.readTree(response.getBody());
-
-                // Check and extract the `id_token`
-                if (responseBody.has("id_token")) {
-                    return responseBody.get("id_token").asText();
-                } else {
-                    System.err.println("`id_token` not found in the token response.");
-                }
+                return response.getBody();
             } else {
                 System.err.println("Token exchange failed with status: " + response.getStatusCode());
             }
@@ -123,6 +125,12 @@ public class LoginController {
         }
 
         return null;
+    }
+
+    public ResponseEntity<String> createCookie(String token){
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Set-Cookie", "token=" + token);
+        return ResponseEntity.ok().headers(headers).build();
     }
 
     public Map<String, String> parseToken(String tokenResponse) {
