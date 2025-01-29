@@ -65,6 +65,7 @@ public class MemcachedHandler {
         }
     }
 
+
     // Delete data from Memcached
     public String memcachedDelete(String key) {
         if (this.memcachedClient == null) {

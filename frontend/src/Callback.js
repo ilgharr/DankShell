@@ -1,27 +1,29 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useCookies } from "react-cookie";
 
 const Callback = () => {
-  const [response, setResponse] = useState(null);
+    const [tokenData, setTokenData] = useState(null);
+    const [cookies, setCookie, removeCookie] = useCookies(["user"]);
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(window.location.search);
+        const code = queryParams.get("code");
+
+        fetch(`/api/callback?code=${code}`)
+            .then((response) => response.json())
+            .then((data) => {
+                setTokenData(data); // Store token data
+            });
+        setCookie("token", tokenData, {path: "/"})
+    }, []);
 
 
-  useEffect(() => {
-    fetch(window.location.href, {
-      method: "GET",
-    })
-      .then((res) => res.json()) // convert response to text
-      .then((data) => setResponse(data)) // store response in the state
-      .catch((err) => console.error(err));
-  }, []);
-
-
-  return (
-    <div>
-      <h1>Callback</h1>
-      <p>{response}</p>
-    </div>
-  );
-}
+    return (
+        <div>
+            <h1>Token Success</h1>
+            {tokenData && <pre>{JSON.stringify(tokenData)}</pre>}
+        </div>
+    );
+};
 
 export default Callback;
-

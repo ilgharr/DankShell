@@ -8,6 +8,6 @@ public class ReactController {
 
     @GetMapping("/{path:[^\\.]*}")
     public String serveReactApp() {
-        return "/index.html";
+        return "forward:/index.html";
     }
 }
