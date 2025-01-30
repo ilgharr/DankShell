@@ -65,9 +65,8 @@ public class LoginController {
         String user_id = extractUserId(tokenResponse);
         String access_token = extractAccessToken(tokenResponse);
         if(user_id != null && access_token != null){
-            memcached.memcachedAddData(user_id, access_token, 60000);
+            memcached.memcachedAddData(user_id, access_token, 300000);
         }
-
 
         // Respond with the Map, returned as JSON by Spring automatically
         return ResponseEntity.ok(tokenResponse);
@@ -80,9 +79,6 @@ public class LoginController {
     // fetch user data from database
     // create and send cookies.
     // finally will redirect to /home with the data to be rendered
-
-
-
 
     @GetMapping("/logout")
     public ResponseEntity<Void> logout() {

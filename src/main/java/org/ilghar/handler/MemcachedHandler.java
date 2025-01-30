@@ -49,20 +49,16 @@ public class MemcachedHandler {
         return "Key = " + key + " added to cache with value = " + value;
     }
 
-//    public boolean checkValueExists
+    public boolean checkKeyExists(String key){
+        return this.memcachedClient.get(key) != null;
+    }
 
     // Get data from Memcached
     public String memcachedGetData(String key) {
         if (this.memcachedClient == null) {
-            return "Memcached client is not connected!";
+            throw new IllegalStateException("Memcached client is not connected!");
         }
-
-        String value = (String) this.memcachedClient.get(key);
-        if (value != null) {
-            return "Cache hit: Key = " + key + ", Value = " + value;
-        } else {
-            return "Cache miss for key: " + key;
-        }
+        return (String) this.memcachedClient.get(key);
     }
 
 
