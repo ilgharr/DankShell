@@ -46,7 +46,7 @@ public class LoginController {
     }
 
     @GetMapping("/api/callback")
-    public ResponseEntity<Map<String, String>> callback(@RequestParam(name = "code", required = false) String code,
+    public ResponseEntity<String> callback(@RequestParam(name = "code", required = false) String code,
                                                         @RequestParam(name = "error", required = false) String error) throws JsonProcessingException {
         // AWS Cognito communicates with this endpoint
         // Code is received after successful login
@@ -65,11 +65,10 @@ public class LoginController {
         String user_id = extractUserId(tokenResponse);
         String access_token = extractAccessToken(tokenResponse);
         if(user_id != null && access_token != null){
-            memcached.memcachedAddData(user_id, access_token, 300000);
+            memcached.memcachedAddData(user_id, access_token, 290000);
         }
 
-        // Respond with the Map, returned as JSON by Spring automatically
-        return ResponseEntity.ok(tokenResponse);
+        return ResponseEntity.ok(user_id);
     }
 
     // /callback is supposed to do many things

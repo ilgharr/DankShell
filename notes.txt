@@ -66,7 +66,7 @@ However, if your **backend is handling the `/callback` route**, and it sends som
 1. When the browser visits `/callback`, the server intercepts this route in its backend logic and **sends the response** (like JSON or HTML) directly.
 2. This response gets displayed in the browser, **bypassing React altogether**.
 
-
+NOTE: responding with Map<String, String>, spring boot will automatically convert it to json
 
 TO DO!!
 - Set the cookie with the following flags:
