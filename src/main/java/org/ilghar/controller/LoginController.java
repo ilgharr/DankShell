@@ -62,6 +62,8 @@ public class LoginController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
+        System.out.println(tokenResponse);
+
         String user_id = extractUserId(tokenResponse);
         String access_token = extractAccessToken(tokenResponse);
         if(user_id != null && access_token != null){
