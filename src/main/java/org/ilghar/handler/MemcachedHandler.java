@@ -41,20 +41,34 @@ public class MemcachedHandler {
 
     // Add data to Memcached
     public String memcachedAddData(String key, String value, int expiration) {
-        if (this.memcachedClient == null) {
-            return "Memcached client is not connected!";
+        // Validate the key
+        if (key == null || key.isEmpty()) {
+            return "Error: Key cannot be null or empty.";
         }
 
-        this.memcachedClient.set(key, expiration, value);
-        return "Key = " + key + " added to cache with value = " + value;
-    }
+        // Validate the value
+        if (value == null || value.isEmpty()) {
+            return "Error: Value cannot be null or empty.";
+        }
 
-    public boolean checkKeyExists(String key){
-        return this.memcachedClient.get(key) != null;
+        // Ensure the Memcached client is connected
+        if (this.memcachedClient == null) {
+            return "Error: Memcached client is not connected.";
+        }
+
+        // Check if the key already exists in the cache
+        if (this.memcachedClient.get(key) != null) {
+            return "Error: The key already exists in the cache.";
+        }
+
+        // Add key-value pair to the cache
+        this.memcachedClient.set(key, expiration, value);
+        return "Cache entry added for key: " + key;
     }
 
     // Get data from Memcached
     public String memcachedGetData(String key) {
+
         if (this.memcachedClient == null) {
             throw new IllegalStateException("Memcached client is not connected!");
         }

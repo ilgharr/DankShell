@@ -58,17 +58,23 @@ public class LoginController {
 
         // Exchange code for tokens
         Map<String, String> tokenResponse = exchangeCodeForTokens(code);
+        System.out.println(tokenResponse);
         if (tokenResponse == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
-        System.out.println(tokenResponse);
+
 
         String user_id = extractUserId(tokenResponse);
-        String access_token = extractAccessToken(tokenResponse);
-        if(user_id != null && access_token != null){
-            memcached.memcachedAddData(user_id, access_token, 290000);
+        String id_token = extractIdToken(tokenResponse);
+        if(user_id != null && id_token != null){
+            memcached.memcachedAddData(user_id, id_token, 300);
         }
+        System.out.println("-------------------------");
+        System.out.println(id_token);
+        System.out.println("-------------------------");
+        System.out.println(tokenResponse.get("access_token"));
+
 
         return ResponseEntity.ok(user_id);
     }

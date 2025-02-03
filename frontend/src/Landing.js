@@ -9,8 +9,7 @@ const Landing = () => {
     return (
         <div>
             <h1>HELLO WORLD!</h1>
-            <h1>HELLO WORLD!</h1>
-            <h1>HELLO WORLD!</h1>
+
             <button onClick={handleLogin}>Login</button>
         </div>
     );

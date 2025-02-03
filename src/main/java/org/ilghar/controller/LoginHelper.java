@@ -11,6 +11,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -95,19 +96,86 @@ public final class LoginHelper {
         }
     }
 
-    public static String extractAccessToken(Map<String, String> tokenResponse) {
+    public static String extractIdToken(Map<String, String> tokenResponse) {
         try {
-            String accessToken = tokenResponse.get("access_token");
-            if (accessToken == null || accessToken.isEmpty()) {
-                throw new IllegalArgumentException("access_token is missing or empty");
+            String idToken = tokenResponse.get("id_token");
+            if (idToken == null || idToken.isEmpty()) {
+                throw new IllegalArgumentException("id_token is missing or empty");
             }
-            return accessToken;
+            return idToken;
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
 
+
+    public static void parseAndPrintFirstJwt(Map<String, String> tokenResponse) {
+        try {
+            // Look for the first valid JWT token in the map
+            String jwt = null;
+            for (String value : tokenResponse.values()) {
+                if (isJwt(value)) {
+                    jwt = value;
+                    break;
+                }
+            }
+
+            if (jwt == null) {
+                throw new IllegalArgumentException("No valid JWT found in the token response.");
+            }
+
+            // Split the JWT into its parts
+            String[] parts = jwt.split("\\.");
+            if (parts.length != 3) {
+                throw new IllegalArgumentException("Invalid JWT format.");
+            }
+
+            // Decode the JWT parts
+            String header = new String(Base64.getUrlDecoder().decode(parts[0]), StandardCharsets.UTF_8);
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+            String signature = parts[2];
+
+            // Print the JWT contents
+            System.out.println("----- HEADER -----");
+            prettyPrintJson(header);
+
+            System.out.println("\n----- PAYLOAD -----");
+            prettyPrintJson(payload);
+
+            System.out.println("\n----- SIGNATURE -----");
+            System.out.println(signature);
+
+        } catch (Exception e) {
+            System.err.println("Error decoding JWT: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Helper function to validate if a string looks like a JWT.
+     *
+     * @param token The token string to check.
+     * @return true if the token is a JWT; false otherwise.
+     */
+    private static boolean isJwt(String token) {
+        return token != null && token.split("\\.").length == 3;
+    }
+
+    /**
+     * Pretty-print a JSON string (used for Header and Payload).
+     *
+     * @param json The JSON string to pretty-print.
+     */
+    private static void prettyPrintJson(String json) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            Object jsonObject = objectMapper.readValue(json, Object.class);
+            String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonObject);
+            System.out.println(prettyJson);
+        } catch (Exception e) {
+            System.out.println("Raw JSON: " + json); // Fallback for malformed JSON
+        }
+    }
 
 }
 

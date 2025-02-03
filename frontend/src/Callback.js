@@ -37,8 +37,31 @@ const Callback = ({ userId }) => {
         })();
     }, [location, setCookie, navigate]);
 
+    const handleSendingId = async () => {
+        const userId = cookies.userId;
+        if(!userId){
+            console.error("No userId available to send.");
+            return;
+        }
+                try{
+                    const response = await fetch("/getid", {
+                            method: "POST",
+                            headers:{"Content-Type": "application/json"},
+                        body: JSON.stringify({ userId }),
+                    });
+
+                    if(response.ok){
+                        console.log("User ID successfully sent to backend.");
+                    } else {
+                        console.error("Failed to send User ID. Status:", response.status);
+                    }
+                } catch (error) {
+                    console.error("Error occurred when sending User ID to backend:", error);
+                }
+   }
+
     return (
-<div>
+        <div>
             <h2>Callback Endpoint</h2>
 
             {cookies.userId ? (
@@ -48,6 +71,7 @@ const Callback = ({ userId }) => {
                 // Waiting for the userId to be fetched and set
                 <p>Waiting for user ID...</p>
             )}
+            <button onClick={handleSendingId}>Send ID</button>
         </div>
     );
 };
