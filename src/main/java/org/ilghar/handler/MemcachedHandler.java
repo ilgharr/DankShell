@@ -1,9 +1,11 @@
 package org.ilghar.handler;
 
 import net.spy.memcached.MemcachedClient;
+import net.spy.memcached.internal.OperationFuture;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 @Component
@@ -17,19 +19,17 @@ public class MemcachedHandler {
 
     private MemcachedClient memcachedClient;
 
-    // Initialize the Memcached client connection
-    public void memcachedConnect() throws Exception {
-        if (this.memcachedClient == null || this.memcachedClient.getAvailableServers().isEmpty()) {
+    public void memcachedConnect(){
+        try {
             this.memcachedClient = new MemcachedClient(
                     new InetSocketAddress(memcachedHost, memcachedPort)
             );
-            System.out.println("Connected to Memcached server at " + memcachedHost + ":" + memcachedPort);
-        } else {
-            System.out.println("Memcached client is already connected!");
+        } catch (IOException e) {
+            System.err.println("Error connecting to Memcached: " + e.getMessage());
+            throw new RuntimeException("Failed to connect to Memcached.", e);
         }
     }
 
-    // Shutdown the Memcached connection
     public void memcachedShutdown() {
         if (this.memcachedClient != null) {
             this.memcachedClient.shutdown();
@@ -39,50 +39,42 @@ public class MemcachedHandler {
         }
     }
 
-    // Add data to Memcached
-    public String memcachedAddData(String key, String value, int expiration) {
-        // Validate the key
+    public boolean memcachedAddData(String key, String value, int expiration) {
         if (key == null || key.isEmpty()) {
-            return "Error: Key cannot be null or empty.";
+            throw new IllegalArgumentException("Adding KEY to memcached cannot be null or empty.");
         }
 
-        // Validate the value
         if (value == null || value.isEmpty()) {
-            return "Error: Value cannot be null or empty.";
+            throw new IllegalArgumentException("Adding VALUE to memcached cannot be null or empty.");
         }
 
-        // Ensure the Memcached client is connected
         if (this.memcachedClient == null) {
-            return "Error: Memcached client is not connected.";
+            throw new IllegalStateException("Memcached client is not connected!");
         }
 
-        // Check if the key already exists in the cache
+        if (expiration < 250) {
+            throw new IllegalArgumentException("Expiration time must be no less than 250 milliseconds.");
+        }
+
         if (this.memcachedClient.get(key) != null) {
-            return "Error: The key already exists in the cache.";
+            return false;
         }
 
-        // Add key-value pair to the cache
         this.memcachedClient.set(key, expiration, value);
-        return "Cache entry added for key: " + key;
+        return true;
     }
 
-    // Get data from Memcached
     public String memcachedGetData(String key) {
-
         if (this.memcachedClient == null) {
             throw new IllegalStateException("Memcached client is not connected!");
         }
         return (String) this.memcachedClient.get(key);
     }
 
-
-    // Delete data from Memcached
-    public String memcachedDelete(String key) {
+    public void memcachedDelete(String key) {
         if (this.memcachedClient == null) {
-            return "Memcached client is not connected!";
+            throw new IllegalStateException("Memcached client is not connected!");
         }
-
         this.memcachedClient.delete(key);
-        return "Cache entry deleted for key: " + key;
     }
 }

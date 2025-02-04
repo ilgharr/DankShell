@@ -57,43 +57,35 @@ public class LoginController {
             return ResponseEntity.badRequest().build();
         }
 
-        // Exchange code for tokens
-        Map<String, String> tokenResponse = exchangeCodeForTokens(code);
-        if (tokenResponse == null) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+        String user_id = "";
+        String id_token = "";
+        String access_token = "";
 
-        String user_id = extractUserId(tokenResponse);
-        String id_token = extractIdToken(tokenResponse);
-        String access_token = extractAccessToken(tokenResponse);
+        try {
+            Map<String, String> tokenResponse = exchangeCodeForTokens(code);
+            if (tokenResponse == null) {
+                return ResponseEntity
+                        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Exchanging code for token failed.");
+            }
 
+            user_id = extractUserId(tokenResponse);
+            id_token = extractIdToken(tokenResponse);
+            access_token = extractAccessToken(tokenResponse);
 
+            ObjectMapper objectMapper = new ObjectMapper();
+            Map<String, String> tokens = new HashMap<>();
 
+            tokens.put("id_token", id_token);
+            tokens.put("access_token", access_token);
 
-        ObjectMapper objectMapper = new ObjectMapper();
-        Map<String, String> tokens = new HashMap<>();
+            String jsonTokens = objectMapper.writeValueAsString(tokens);
 
-        tokens.put("id_token", id_token);
-        tokens.put("access_token", access_token);
-
-        String jsonTokens = objectMapper.writeValueAsString(tokens);
-
-//        System.out.println("------------------------------------");
-//        System.out.println("id token: " + id_token);
-//        System.out.println("------------------------------------");
-//        System.out.println("access token: " + access_token);
-//        System.out.println("------------------------------------");
-//        System.out.println("user id: " + user_id);
-//        System.out.println("------------------------------------");
-//        System.out.println("tokens: " + tokens);
-//        System.out.println("------------------------------------");
-//        System.out.println("object mapper: " + objectMapper);
-//        System.out.println("------------------------------------");
-//        System.out.println("json token: " + jsonTokens);
-//        System.out.println("------------------------------------");
-
-        if(user_id != null && id_token != null){
-            memcached.memcachedAddData(user_id, jsonTokens, 300);
+            if(user_id != null && id_token != null){
+                memcached.memcachedAddData(user_id, jsonTokens, 300);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error while processing user login /api/callback.", e);
         }
 
         return ResponseEntity.ok(user_id);
@@ -106,9 +98,11 @@ public class LoginController {
     // create and send cookies.
     // finally will redirect to /home with the data to be rendered
 
+    // the response does not contain a body
+    // indicated in <void> return type
     @GetMapping("/logout")
     public ResponseEntity<Void> logout() {
-        // logs user out
+
         // responds with AWS Cognito logout endpoint, client id and redirect uri
         String cognitoLogoutUrl = String.format(
                 "%s?client_id=%s&logout_uri=%s",

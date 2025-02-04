@@ -1,14 +1,17 @@
 package org.ilghar.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.ilghar.Secrets;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.nio.charset.StandardCharsets;
@@ -19,77 +22,53 @@ import java.util.Map;
 public final class LoginHelper {
 
     public static Map<String, String> exchangeCodeForTokens(String code) {
-
-        // creates an object to perform HTTP request
         RestTemplate restTemplate = new RestTemplate();
 
-        // creates a "map" to hold the form data for the HTTP request
         MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
-
-        // add keys and values inside the form
         requestBody.add("grant_type", "authorization_code");
         requestBody.add("client_id", Secrets.CLIENT_ID);
         requestBody.add("client_secret", Secrets.CLIENT_SECRET);
         requestBody.add("redirect_uri", Secrets.REDIRECT_URI);
         requestBody.add("code", code);
 
-        // create HTTP headers for the request
         HttpHeaders headers = new HttpHeaders();
-
-        // sets the content type of the headers
-        headers.set("Content-Type", "application/x-www-form-urlencoded");
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
         try {
-            // sends the POST request to the given endpoint
             ResponseEntity<String> response = restTemplate.postForEntity(
                     Secrets.TOKEN_ENDPOINT, new HttpEntity<>(requestBody, headers), String.class);
-
-            // Check if the response is successful
-            if (response.getStatusCode().is2xxSuccessful()) {
-                // Parse the JSON string into a Map
-                Map<String, String> responseMap = new HashMap<>();
-
-                String[] pairs = response.getBody().replaceAll("[{}\"]", "").split(",");
-                for (String pair : pairs) {
-                    String[] keyValue = pair.split(":");
-                    if (keyValue.length == 2) {
-                        responseMap.put(keyValue[0].trim(), keyValue[1].trim());
-                    }
-                }
-
-                return responseMap; // Return as a simple Map
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                return new ObjectMapper().readValue(response.getBody(), new TypeReference<>() {});
             } else {
-                System.err.println("Token exchange failed with status: " + response.getStatusCode());
-            }
+                throw new HttpClientErrorException(response.getStatusCode(), "Token exchange failed.");            }
         } catch (Exception e) {
-            System.err.println("Error while exchanging code for tokens: " + e.getMessage());
+            throw new RuntimeException("Error while exchanging code for tokens", e);
         }
-
-        return null;
     }
 
     public static String extractUserId(Map<String, String> tokenResponse) throws JsonProcessingException {
         try{
-            String idToken = tokenResponse.get("id_token");
-            if(idToken == null || idToken.isEmpty()){
-                throw new IllegalArgumentException("id_token is missing or invalid");
-            }
+            String id_token = extractIdToken(tokenResponse);
 
-            String[] tokenParts = idToken.split("\\.");
+            String[] tokenParts = id_token.split("\\.");
             if (tokenParts.length != 3) {
-                throw new IllegalArgumentException("Invalid id_token format");
+                throw new IllegalArgumentException("Invalid id_token format.");
             }
 
+            // Base64.getDecoder(): returns a Base64.Decoder instance
+            // decode(): decodes the base 64 encoded String, returns as byte[]
+            // new String(): converts bytes to String
             String payload = new String(Base64.getDecoder().decode(tokenParts[1]));
 
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode payloadJson = objectMapper.readTree(payload);
+            int sub_start = payload.indexOf("\"sub\":\"") + 7;
+            int sub_end = payload.indexOf("\"", sub_start);
 
-            if (payloadJson.has("sub")) {
-                return payloadJson.get("sub").asText(); // Return the user ID
-            } else {
+            // checks if "sub" field is missing
+            if (sub_start < 7 || sub_end == -1) {
                 throw new IllegalArgumentException("sub claim not found in id_token");
             }
+
+            return payload.substring(sub_start, sub_end);
         } catch (Exception e){
             e.printStackTrace();
             return null;
@@ -97,16 +76,16 @@ public final class LoginHelper {
     }
 
     public static String extractAccessToken(Map<String, String> tokenResponse) {
-        try {
-            String accessToken = tokenResponse.get("access_token");
-            if (accessToken == null || accessToken.isEmpty()) {
-                throw new IllegalArgumentException("access_token is missing or empty");
-            }
-            return accessToken;
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (tokenResponse == null || tokenResponse.isEmpty()) {
+            throw new IllegalArgumentException("tokenResponse map is empty or null");
         }
-        return null;
+
+        String accessToken = tokenResponse.get("access_token");
+        if (accessToken == null || accessToken.isEmpty()) {
+            throw new IllegalArgumentException("access_token is missing or empty");
+        }
+
+        return accessToken;
     }
 
     public static String extractIdToken(Map<String, String> tokenResponse) {
@@ -122,6 +101,10 @@ public final class LoginHelper {
         }
     }
 
+
+
+
+    // ---------------------------UNUSED------------------------------------
     public static void parseAndPrintFirstJwt(Map<String, String> tokenResponse) {
         try {
             // Look for the first valid JWT token in the map

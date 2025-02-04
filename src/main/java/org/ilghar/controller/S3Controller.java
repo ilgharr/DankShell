@@ -46,47 +46,47 @@ public class S3Controller {
 //
 //        Map<String, String> credentialsResponse = fetchTemporaryCredentials(idToken, accessToken);
 //
-////        System.out.println("Access Key: " + credentialsResponse.get("AccessKeyId"));
+//        System.out.println("Access Key: " + credentialsResponse.get("AccessKeyId"));
 //
 //        return ResponseEntity.ok("User ID received successfully");
 //    }
 
-@PostMapping("/getid")
-public ResponseEntity<String> getID(@RequestBody Map<String, String> payload) throws JsonProcessingException {
-    String userId = payload.get("userId");
+    @PostMapping("/getid")
+    public ResponseEntity<String> getID(@RequestBody Map<String, String> payload) throws JsonProcessingException {
+        String userId = payload.get("userId");
 
-    if (userId == null || userId.isEmpty()) {
-        return ResponseEntity.badRequest().body("User ID is missing");
+        if (userId == null || userId.isEmpty()) {
+            return ResponseEntity.badRequest().body("User ID is missing");
+        }
+
+        String token = memcached.memcachedGetData(userId);
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No token found for the given User ID.");
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, String> tokenMap = objectMapper.readValue(token, Map.class);
+
+        String id_token = tokenMap.get("id_token");
+//        String access_token = tokenMap.get("access_token");
+
+
+        // Fetch Identity ID
+        Map<String, String> identityResponse = fetchIdentityId(id_token);
+        if (identityResponse == null || !identityResponse.containsKey("IdentityId")) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to fetch Identity ID.");
+        }
+
+        System.out.println("Identity ID: " + identityResponse.get("IdentityId"));
+
+        // Fetch Temporary Credentials
+    //    Map<String, String> credentialsResponse = fetchTemporaryCredentials(identityResponse.get("IdentityId"), id_token);
+    //    if (credentialsResponse == null) {
+    //        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to fetch temporary credentials.");
+    //    }
+
+        return ResponseEntity.ok("User ID received successfully");
     }
-
-    String token = memcached.memcachedGetData(userId);
-    if (token == null) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No token found for the given User ID.");
-    }
-
-    ObjectMapper objectMapper = new ObjectMapper();
-    Map<String, String> tokenMap = objectMapper.readValue(token, Map.class);
-
-    String id_token = tokenMap.get("id_token");
-    String access_token = tokenMap.get("access_token");
-
-
-    // Fetch Identity ID
-    Map<String, String> identityResponse = fetchIdentityId(id_token);
-    if (identityResponse == null || !identityResponse.containsKey("IdentityId")) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to fetch Identity ID.");
-    }
-
-    System.out.println("Identity ID: " + identityResponse.get("IdentityId"));
-
-    // Fetch Temporary Credentials
-//    Map<String, String> credentialsResponse = fetchTemporaryCredentials(identityResponse.get("IdentityId"), id_token);
-//    if (credentialsResponse == null) {
-//        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to fetch temporary credentials.");
-//    }
-
-    return ResponseEntity.ok("User ID received successfully");
-}
 
     public Map<String, String> fetchIdentityId(String id_token) {
         try {
