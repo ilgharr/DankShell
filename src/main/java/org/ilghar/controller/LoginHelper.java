@@ -96,6 +96,19 @@ public final class LoginHelper {
         }
     }
 
+    public static String extractAccessToken(Map<String, String> tokenResponse) {
+        try {
+            String accessToken = tokenResponse.get("access_token");
+            if (accessToken == null || accessToken.isEmpty()) {
+                throw new IllegalArgumentException("access_token is missing or empty");
+            }
+            return accessToken;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public static String extractIdToken(Map<String, String> tokenResponse) {
         try {
             String idToken = tokenResponse.get("id_token");
@@ -108,7 +121,6 @@ public final class LoginHelper {
             return null;
         }
     }
-
 
     public static void parseAndPrintFirstJwt(Map<String, String> tokenResponse) {
         try {
@@ -151,21 +163,10 @@ public final class LoginHelper {
         }
     }
 
-    /**
-     * Helper function to validate if a string looks like a JWT.
-     *
-     * @param token The token string to check.
-     * @return true if the token is a JWT; false otherwise.
-     */
     private static boolean isJwt(String token) {
         return token != null && token.split("\\.").length == 3;
     }
 
-    /**
-     * Pretty-print a JSON string (used for Header and Payload).
-     *
-     * @param json The JSON string to pretty-print.
-     */
     private static void prettyPrintJson(String json) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();

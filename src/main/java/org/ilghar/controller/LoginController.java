@@ -3,6 +3,7 @@ package org.ilghar.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.*;
 
+import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
 import com.nimbusds.jose.jwk.*;
 import com.nimbusds.jwt.*;
@@ -58,27 +59,45 @@ public class LoginController {
 
         // Exchange code for tokens
         Map<String, String> tokenResponse = exchangeCodeForTokens(code);
-        System.out.println(tokenResponse);
         if (tokenResponse == null) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
 
-
-
         String user_id = extractUserId(tokenResponse);
         String id_token = extractIdToken(tokenResponse);
-        if(user_id != null && id_token != null){
-            memcached.memcachedAddData(user_id, id_token, 300);
-        }
-        System.out.println("-------------------------");
-        System.out.println(id_token);
-        System.out.println("-------------------------");
-        System.out.println(tokenResponse.get("access_token"));
+        String access_token = extractAccessToken(tokenResponse);
 
+
+
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, String> tokens = new HashMap<>();
+
+        tokens.put("id_token", id_token);
+        tokens.put("access_token", access_token);
+
+        String jsonTokens = objectMapper.writeValueAsString(tokens);
+
+//        System.out.println("------------------------------------");
+//        System.out.println("id token: " + id_token);
+//        System.out.println("------------------------------------");
+//        System.out.println("access token: " + access_token);
+//        System.out.println("------------------------------------");
+//        System.out.println("user id: " + user_id);
+//        System.out.println("------------------------------------");
+//        System.out.println("tokens: " + tokens);
+//        System.out.println("------------------------------------");
+//        System.out.println("object mapper: " + objectMapper);
+//        System.out.println("------------------------------------");
+//        System.out.println("json token: " + jsonTokens);
+//        System.out.println("------------------------------------");
+
+        if(user_id != null && id_token != null){
+            memcached.memcachedAddData(user_id, jsonTokens, 300);
+        }
 
         return ResponseEntity.ok(user_id);
     }
-
     // /callback is supposed to do many things
     // caching
     // user session
