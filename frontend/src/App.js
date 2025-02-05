@@ -1,9 +1,10 @@
 import React, {useEffect} from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useCookies } from "react-cookie";
-import Home from './Home'
-import Landing from './Landing'
-import Callback from './Callback'
+import Home from './components/Home'
+import Landing from './components/Landing'
+import Callback from './components/Callback'
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const App = () => {
     const [cookies, setCookie] = useCookies(["userId"]);

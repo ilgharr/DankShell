@@ -65,10 +65,8 @@ const Callback = ({ userId }) => {
             <h2>Callback Endpoint</h2>
 
             {cookies.userId ? (
-                // Display the userId cookie (if set)
                 <p>Cookie has been set for User ID: {cookies.userId}</p>
             ) : (
-                // Waiting for the userId to be fetched and set
                 <p>Waiting for user ID...</p>
             )}
             <button onClick={handleSendingId}>Send ID</button>

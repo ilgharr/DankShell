@@ -9,3 +9,11 @@ root.render(
         <App />
     </BrowserRouter>
 );
+
+/*
+* Cats are territorial
+* So, when a door gets shut, they feel as if their boundaries aren't being respected,
+* which causes distress. If your cat usually runs the house,
+* then they will consider your entire home to be their territory.
+* When adding a barrier to your cat's space, it's common to see them become distraught.
+* */
