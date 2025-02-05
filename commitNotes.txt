@@ -1,3 +1,6 @@
+This file is for noting down commit comments as I write code.
+
+
 Self code review.
 Error handling added and/or improved for the following, Main, MemcachedHandler, LoginHelper, LoginController
 

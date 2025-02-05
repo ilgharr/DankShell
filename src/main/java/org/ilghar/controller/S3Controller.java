@@ -20,37 +20,6 @@ public class S3Controller {
     @Autowired
     public MemcachedHandler memcached;
 
-    // test endpoint to check if I can get the correct user_id
-//    @PostMapping("/getid")
-//    public ResponseEntity<String> getID(@RequestBody Map<String, String> payload) throws JsonProcessingException {
-//        String userId = payload.get("userId");
-//
-//        if (userId == null || userId.isEmpty()) {
-//            return ResponseEntity.badRequest().body("User ID is missing");
-//        }
-//
-//        String token = memcached.memcachedGetData(userId);
-//        ObjectMapper objectMapper = new ObjectMapper();
-//
-//        Map<String, String> tokenMap = objectMapper.readValue(token, Map.class);
-//
-//        String idToken = tokenMap.get("id_token");
-//        String accessToken = tokenMap.get("access_token");
-//
-//        Map<String, String> identityResponse = fetchIdentityId(idToken);
-//        if (identityResponse != null) {
-//            System.out.println("Identity ID: " + identityResponse.get("IdentityId"));
-//        } else {
-//            System.err.println("Failed to fetch Identity ID.");
-//        }
-//
-//        Map<String, String> credentialsResponse = fetchTemporaryCredentials(idToken, accessToken);
-//
-//        System.out.println("Access Key: " + credentialsResponse.get("AccessKeyId"));
-//
-//        return ResponseEntity.ok("User ID received successfully");
-//    }
-
     @PostMapping("/getid")
     public ResponseEntity<String> getID(@RequestBody Map<String, String> payload) throws JsonProcessingException {
         String userId = payload.get("userId");
@@ -71,19 +40,12 @@ public class S3Controller {
 //        String access_token = tokenMap.get("access_token");
 
 
-        // Fetch Identity ID
         Map<String, String> identityResponse = fetchIdentityId(id_token);
         if (identityResponse == null || !identityResponse.containsKey("IdentityId")) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to fetch Identity ID.");
         }
 
         System.out.println("Identity ID: " + identityResponse.get("IdentityId"));
-
-        // Fetch Temporary Credentials
-    //    Map<String, String> credentialsResponse = fetchTemporaryCredentials(identityResponse.get("IdentityId"), id_token);
-    //    if (credentialsResponse == null) {
-    //        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to fetch temporary credentials.");
-    //    }
 
         return ResponseEntity.ok("User ID received successfully");
     }
