@@ -1,4 +1,6 @@
 import React from 'react';
+import { Navbar, Container, Button } from 'react-bootstrap';
+
 import LandingNavbar from './LandingNavbar'
 import Footer from './Footer'
 import "./CssHelper.js"
@@ -11,8 +13,10 @@ const Landing = () => {
     return (
         <div>
             <LandingNavbar/>
-            <div id="stars"></div>
-            <script src="./CssHelper.js"></script>
+               <Container className="landing-page-info">
+                    <p>"Simple and Secure Cloud Storage for Everything You Need!"</p>
+                    <p>"Access your files anywhere, anytime. Safe, fast, and hassle-free."</p>
+                </Container>
             <Footer/>
         </div>
     );

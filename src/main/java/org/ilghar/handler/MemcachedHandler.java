@@ -1,5 +1,6 @@
 package org.ilghar.handler;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.internal.OperationFuture;
 import org.springframework.beans.factory.annotation.Value;
@@ -62,6 +63,28 @@ public class MemcachedHandler {
 
         this.memcachedClient.set(key, expiration, value);
         return true;
+    }
+
+    public String memcachedGetIdToken(String key) {
+        try {
+            return new ObjectMapper()
+                    .readTree(memcachedGetData(key))
+                    .get("id_token")
+                    .asText();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to extract id_token", e);
+        }
+    }
+
+    public String memcachedGetAccessToken(String key) {
+        try {
+            return new ObjectMapper()
+                    .readTree(memcachedGetData(key))
+                    .get("access_token")
+                    .asText();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to extract id_token", e);
+        }
     }
 
     public String memcachedGetData(String key) {
